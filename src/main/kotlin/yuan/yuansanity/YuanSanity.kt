@@ -9,6 +9,7 @@ import yuan.yuansanity.hook.SanityExpansion
 import yuan.yuansanity.listener.PlayerListener
 import yuan.yuansanity.manager.SanityManager
 import yuan.yuansanity.nms.PacketInjector
+import yuan.yuansanity.protocol.ProtocolLibScareEngine
 
 class YuanSanity : JavaPlugin() {
 
@@ -27,6 +28,9 @@ class YuanSanity : JavaPlugin() {
     lateinit var hallucinationEngine: HallucinationEngine
         private set
 
+    var protocolScareEngine: ProtocolLibScareEngine? = null
+        private set
+
     var foliaSupport: Boolean = false
         private set
 
@@ -41,6 +45,12 @@ class YuanSanity : JavaPlugin() {
         sanityManager = SanityManager(this)
         hallucinationEngine = HallucinationEngine(this)
         packetInjector = PacketInjector(this)
+        protocolScareEngine = if (server.pluginManager.getPlugin("ProtocolLib") != null) {
+            logger.info("Da ket noi ProtocolLib - bat packet scare nang cao")
+            ProtocolLibScareEngine(this)
+        } else {
+            null
+        }
 
         playerListener = PlayerListener(this)
         server.pluginManager.registerEvents(playerListener, this)
@@ -51,11 +61,12 @@ class YuanSanity : JavaPlugin() {
         cmd?.tabCompleter = sanityCommand
 
         if (server.pluginManager.getPlugin("PlaceholderAPI") != null) {
-            SanityExpansion(this).register()
+            SanityExpansion(this, "yuansanity").register()
+            SanityExpansion(this, "sanity").register()
             logger.info("Da ket noi PlaceholderAPI")
         }
 
-        logger.info("YuanSanity da bat")
+        logger.info("YuanSanity da bat - Folia: $foliaSupport")
     }
 
     override fun onDisable() {

@@ -4,9 +4,12 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion
 import org.bukkit.OfflinePlayer
 import yuan.yuansanity.YuanSanity
 
-class SanityExpansion(private val plugin: YuanSanity) : PlaceholderExpansion() {
+class SanityExpansion(
+    private val plugin: YuanSanity,
+    private val identifier: String = "yuansanity"
+) : PlaceholderExpansion() {
 
-    override fun getIdentifier(): String = "yuansanity"
+    override fun getIdentifier(): String = identifier
 
     override fun getAuthor(): String = "Yuan"
 
@@ -25,6 +28,22 @@ class SanityExpansion(private val plugin: YuanSanity) : PlaceholderExpansion() {
                 val current = plugin.sanityManager.getSanity(onlinePlayer)
                 val max = plugin.sanityManager.getMaxSanity()
                 String.format("%.0f%%", (current / max) * 100)
+            }
+            "stats" -> {
+                val current = plugin.sanityManager.getSanity(onlinePlayer)
+                val max = plugin.sanityManager.getMaxSanity()
+                val percent = if (max <= 0.0) 0.0 else (current / max) * 100.0
+                String.format("%.1f/%.1f (%.0f%%)", current, max, percent)
+            }
+            "status" -> {
+                val current = plugin.sanityManager.getSanity(onlinePlayer)
+                when {
+                    current <= 0.0 -> "INSANE"
+                    current < 25.0 -> "PANIC"
+                    current < 50.0 -> "UNSTABLE"
+                    current < 80.0 -> "UNEASY"
+                    else -> "STABLE"
+                }
             }
             else -> null
         }

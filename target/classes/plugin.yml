@@ -8,6 +8,7 @@ description: He thong ao giac kinh di voi Sanity
 
 softdepend:
   - PlaceholderAPI
+  - ProtocolLib
 
 commands:
   sanity:

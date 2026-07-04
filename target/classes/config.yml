@@ -24,8 +24,20 @@ settings:
   isolation-range: 500
   # Luong Sanity bi tru moi giay khi co don
   isolation-drain: 0.3
+  # Hien thanh hotbar/actionbar bao nhieu % Sanity
+  actionbar-enabled: true
+  # Format actionbar. Placeholder: %sanity%, %max%, %percent%, %status%
+  actionbar-format: "&8[&4Sanity&8] &c%percent%% &7- &f%status%"
 
 hallucination:
+  # Bat cac hieu ung packet nang cao bang ProtocolLib neu server co cai ProtocolLib
+  protocollib-packet-scares-enabled: true
+  # Fake set tia set client-side gan player
+  packet-lightning-enabled: true
+  # Lam man hinh rung/flash do nhu bi danh nhung khong gay damage
+  packet-hurt-flash-enabled: true
+  # Tao vet nut block ao quanh player
+  packet-block-cracks-enabled: true
   # Ti le xuat hien block gia (0.0 - 1.0)
   fake-block-chance: 0.05
   # Ti le nghe thay tieng thi tham
@@ -36,6 +48,20 @@ hallucination:
   inventory-glitch-chance: 0.03
   # Ti le vat pham ao
   fake-drop-chance: 0.04
+  # Ti le chat ao don dap khi Sanity thap
+  panic-chat-chance: 0.08
+  # Ti le xuat hien nghi le/di vat khi Sanity rat thap
+  occult-scene-chance: 0.04
+  # Cooldown giua cac lan hien nghi le/di vat (giay)
+  occult-scene-cooldown: 12
+  # Thoi gian fake block/di vat ton tai (tick)
+  occult-scene-duration: 120
+  # Ten player gia khi Sanity ve 0
+  herobrine-name: "Herobrine"
+  # Moi bao nhieu giay bi Herobrine jumpscare khi Sanity = 0
+  herobrine-jumpscare-interval: 15
+  # Thoi gian Herobrine dung lai truoc khi tan bien (tick)
+  herobrine-duration: 120
   # Thoi gian cho giua cac lan spawn Nightmare (giay)
   nightmare-cooldown: 60
   # Mau cua The Nightmare

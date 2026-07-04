@@ -30,7 +30,6 @@ class SchedulerAdapter(private val plugin: YuanSanity) {
             }
             action()
         }, null, delayTicks, periodTicks)
-
         return TaskHandle { task?.cancel() }
     }
 
