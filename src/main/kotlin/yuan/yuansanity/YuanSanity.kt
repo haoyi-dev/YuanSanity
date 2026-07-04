@@ -55,7 +55,7 @@ class YuanSanity : JavaPlugin() {
             logger.info("Da ket noi PlaceholderAPI")
         }
 
-        logger.info("YuanSanity da bat - Folia: $foliaSupport")
+        logger.info("YuanSanity da bat")
     }
 
     override fun onDisable() {
