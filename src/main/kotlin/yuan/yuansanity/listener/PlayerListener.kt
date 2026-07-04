@@ -95,7 +95,18 @@ class PlayerListener(private val plugin: YuanSanity) : Listener {
             return
         }
 
+        if (plugin.hallucinationEngine.isHerobrine(event.entity)) {
+            event.isCancelled = true
+            return
+        }
+
         val player = event.entity as? Player ?: return
+        if (plugin.hallucinationEngine.isHerobrine(event.damager)) {
+            event.isCancelled = true
+            plugin.hallucinationEngine.handleHerobrineDamage(player, event.damager)
+            return
+        }
+
         if (event.damager is Enderman) {
             plugin.sanityManager.modifySanity(player, -10.0)
         }

@@ -34,12 +34,13 @@ class SchedulerAdapter(private val plugin: YuanSanity) {
     }
 
     fun runPlayerLater(player: Player, delayTicks: Long, action: () -> Unit): TaskHandle {
+        val safeDelay = delayTicks.coerceAtLeast(1L)
         if (!plugin.foliaSupport) {
-            val task = plugin.server.scheduler.runTaskLater(plugin, Runnable { action() }, delayTicks)
+            val task = plugin.server.scheduler.runTaskLater(plugin, Runnable { action() }, safeDelay)
             return TaskHandle { task.cancel() }
         }
 
-        val task = player.scheduler.runDelayed(plugin, { _ -> action() }, null, delayTicks)
+        val task = player.scheduler.runDelayed(plugin, { _ -> action() }, null, safeDelay)
         return TaskHandle { task?.cancel() }
     }
 
@@ -64,12 +65,13 @@ class SchedulerAdapter(private val plugin: YuanSanity) {
     }
 
     fun runEntityLater(entity: Entity, delayTicks: Long, action: () -> Unit): TaskHandle {
+        val safeDelay = delayTicks.coerceAtLeast(1L)
         if (!plugin.foliaSupport) {
-            val task = plugin.server.scheduler.runTaskLater(plugin, Runnable { action() }, delayTicks)
+            val task = plugin.server.scheduler.runTaskLater(plugin, Runnable { action() }, safeDelay)
             return TaskHandle { task.cancel() }
         }
 
-        val task = entity.scheduler.runDelayed(plugin, { _ -> action() }, null, delayTicks)
+        val task = entity.scheduler.runDelayed(plugin, { _ -> action() }, null, safeDelay)
         return TaskHandle { task?.cancel() }
     }
 

@@ -38,11 +38,11 @@ class SanityExpansion(
             "status" -> {
                 val current = plugin.sanityManager.getSanity(onlinePlayer)
                 when {
-                    current <= 0.0 -> "INSANE"
-                    current < 25.0 -> "PANIC"
-                    current < 50.0 -> "UNSTABLE"
-                    current < 80.0 -> "UNEASY"
-                    else -> "STABLE"
+                    current <= 0.0 -> "Đời Hư Ảo Đưa Em Vào Cơn Mê"
+                    current < 25.0 -> "Ảo Giác"
+                    current < 50.0 -> "Hơi Choáng"
+                    current < 80.0 -> "Hơi Lạ"
+                    else -> "Bình Thường"
                 }
             }
             else -> null

@@ -13,6 +13,7 @@ import org.bukkit.entity.EntityType
 import org.bukkit.entity.Item
 import org.bukkit.entity.Phantom
 import org.bukkit.entity.Player
+import org.bukkit.entity.Zombie
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.potion.PotionEffect
@@ -25,12 +26,15 @@ class HallucinationEngine(private val plugin: YuanSanity) {
 
     private val fakeDropKey = NamespacedKey(plugin, "fake_drop")
     private val doppelgangerKey = NamespacedKey(plugin, "doppelganger")
+    private val herobrineKey = NamespacedKey(plugin, "herobrine_stalker")
     private val nightmareCooldowns = mutableMapOf<UUID, Long>()
     private val herobrineCooldowns = mutableMapOf<UUID, Long>()
     private val occultCooldowns = mutableMapOf<UUID, Long>()
+    private val herobrineActionCooldowns = mutableMapOf<UUID, Long>()
     private val panicChatCooldowns = mutableMapOf<UUID, Long>()
     private val nightmares = mutableMapOf<UUID, MutableList<Phantom>>()
     private val doppelgangers = mutableMapOf<UUID, MutableList<ArmorStand>>()
+    private val herobrines = mutableMapOf<UUID, Zombie>()
     private val ritualItems = mutableMapOf<UUID, MutableList<Item>>()
 
     private val whisperMessages = listOf(
@@ -160,9 +164,15 @@ class HallucinationEngine(private val plugin: YuanSanity) {
                 triggerOccultScene(player, force = true)
                 herobrineCooldowns[player.uniqueId] = currentTime
             }
+            if (cfg.getBoolean("hallucination.herobrine-stalker-enabled", true)) {
+                ensureHerobrineStalker(player)
+                tickHerobrineStalker(player)
+            }
         } else {
             nightmareCooldowns.remove(player.uniqueId)
             herobrineCooldowns.remove(player.uniqueId)
+            herobrineActionCooldowns.remove(player.uniqueId)
+            herobrines.remove(player.uniqueId)?.let { removeEntity(it) }
         }
     }
 
@@ -170,9 +180,11 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         nightmareCooldowns.remove(player.uniqueId)
         herobrineCooldowns.remove(player.uniqueId)
         occultCooldowns.remove(player.uniqueId)
+        herobrineActionCooldowns.remove(player.uniqueId)
         panicChatCooldowns.remove(player.uniqueId)
         removeEntities(nightmares.remove(player.uniqueId).orEmpty())
         removeEntities(doppelgangers.remove(player.uniqueId).orEmpty())
+        herobrines.remove(player.uniqueId)?.let { removeEntity(it) }
         removeEntities(ritualItems.remove(player.uniqueId).orEmpty())
     }
 
@@ -180,12 +192,31 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         nightmareCooldowns.clear()
         herobrineCooldowns.clear()
         occultCooldowns.clear()
+        herobrineActionCooldowns.clear()
         panicChatCooldowns.clear()
         nightmares.values.flatten().forEach { removeEntity(it) }
         doppelgangers.values.flatten().forEach { removeEntity(it) }
+        herobrines.values.forEach { removeEntity(it) }
         ritualItems.values.flatten().forEach { removeEntity(it) }
         nightmares.clear()
         doppelgangers.clear()
+        herobrines.clear()
+        ritualItems.clear()
+    }
+
+    fun cleanupAllOnDisable() {
+        nightmareCooldowns.clear()
+        herobrineCooldowns.clear()
+        occultCooldowns.clear()
+        herobrineActionCooldowns.clear()
+        panicChatCooldowns.clear()
+        nightmares.values.flatten().forEach { removeEntityNow(it) }
+        doppelgangers.values.flatten().forEach { removeEntityNow(it) }
+        herobrines.values.forEach { removeEntityNow(it) }
+        ritualItems.values.flatten().forEach { removeEntityNow(it) }
+        nightmares.clear()
+        doppelgangers.clear()
+        herobrines.clear()
         ritualItems.clear()
     }
 
@@ -203,6 +234,20 @@ class HallucinationEngine(private val plugin: YuanSanity) {
 
     fun isDoppelganger(stand: ArmorStand): Boolean {
         return stand.persistentDataContainer.has(doppelgangerKey, PersistentDataType.BYTE)
+    }
+
+    fun isHerobrine(entity: Entity): Boolean {
+        return entity.persistentDataContainer.has(herobrineKey, PersistentDataType.BYTE)
+    }
+
+    fun handleHerobrineDamage(player: Player, herobrine: Entity) {
+        val direction = player.location.toVector().subtract(herobrine.location.toVector()).normalize()
+        direction.y = 0.35
+        player.velocity = direction.multiply(1.15)
+        player.addPotionEffect(PotionEffect(PotionEffectType.DARKNESS, 45, 0, false, false, true))
+        player.playSound(player.location, Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 0.8f, 0.55f)
+        playScareCombo(player, "hit")
+        triggerPanicChatBurst(player, 3)
     }
 
     fun removeDoppelganger(stand: ArmorStand) {
@@ -234,6 +279,107 @@ class HallucinationEngine(private val plugin: YuanSanity) {
             nightmares.computeIfAbsent(player.uniqueId) { mutableListOf() }.add(phantom)
             player.sendMessage(plugin.languageManager.getMessage("nightmare-spawn"))
         }
+    }
+
+    private fun ensureHerobrineStalker(player: Player) {
+        val current = herobrines[player.uniqueId]
+        if (current != null && current.isValid && !current.isDead) return
+
+        val spawnLoc = player.location.clone().subtract(player.location.direction.normalize().multiply(7.0))
+        plugin.scheduler.runRegion(spawnLoc) {
+            if (!player.isOnline) return@runRegion
+            if (herobrines[player.uniqueId]?.isValid == true) return@runRegion
+
+            val zombie = spawnLoc.world.spawnEntity(spawnLoc, EntityType.ZOMBIE) as Zombie
+            zombie.customName(Component.text("\u00a74${nameOfHerobrine()}"))
+            zombie.isCustomNameVisible = true
+            zombie.setAdult()
+            zombie.setAI(true)
+            zombie.isSilent = true
+            zombie.isPersistent = false
+            zombie.removeWhenFarAway = true
+            zombie.isVisibleByDefault = false
+            zombie.persistentDataContainer.set(herobrineKey, PersistentDataType.BYTE, 1.toByte())
+            zombie.equipment.setItemInMainHand(ItemStack(Material.NETHERITE_SWORD))
+            zombie.equipment.helmet = ItemStack(Material.PLAYER_HEAD)
+            zombie.equipment.chestplate = ItemStack(Material.NETHERITE_CHESTPLATE)
+            zombie.equipment.leggings = ItemStack(Material.NETHERITE_LEGGINGS)
+            zombie.equipment.boots = ItemStack(Material.NETHERITE_BOOTS)
+            zombie.target = player
+            player.showEntity(plugin, zombie)
+            herobrines[player.uniqueId] = zombie
+            playScareCombo(player, "stalker-spawn")
+        }
+    }
+
+    private fun tickHerobrineStalker(player: Player) {
+        val herobrine = herobrines[player.uniqueId] ?: return
+        if (!herobrine.isValid || herobrine.isDead) {
+            herobrines.remove(player.uniqueId)
+            return
+        }
+
+        plugin.scheduler.runEntityTask(herobrine) {
+            if (!player.isOnline || !herobrine.isValid) return@runEntityTask
+            herobrine.target = player
+        }
+
+        val now = System.currentTimeMillis()
+        val last = herobrineActionCooldowns[player.uniqueId] ?: 0L
+        val actionCooldown = plugin.config.getLong("hallucination.herobrine-stalker-action-cooldown", 6) * 1000L
+        if (now - last < actionCooldown) return
+        herobrineActionCooldowns[player.uniqueId] = now
+
+        val distanceSquared = runCatching { herobrine.location.distanceSquared(player.location) }.getOrDefault(9999.0)
+        if (distanceSquared <= 16.0) {
+            when (Random.nextInt(4)) {
+                0 -> dragPlayerLeg(player, herobrine.location)
+                1 -> liftAndThrowPlayer(player)
+                2 -> crawlScare(player)
+                else -> handleHerobrineDamage(player, herobrine)
+            }
+        } else if (distanceSquared > 900.0) {
+            herobrines.remove(player.uniqueId)?.let { removeEntity(it) }
+        }
+    }
+
+    private fun dragPlayerLeg(player: Player, source: Location) {
+        val pull = source.toVector().subtract(player.location.toVector()).normalize()
+        pull.y = -0.25
+        player.velocity = pull.multiply(0.95)
+        player.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 70, 3, false, false, true))
+        player.addPotionEffect(PotionEffect(PotionEffectType.BLINDNESS, 25, 0, false, false, true))
+        player.sendTitle("\u00a74${nameOfHerobrine()}", "\u00a7ckeo chan...", 0, 25, 10)
+        player.playSound(player.location, Sound.BLOCK_CHAIN_PLACE, 1.0f, 0.45f)
+        player.playSound(player.location, Sound.ENTITY_WARDEN_HEARTBEAT, 1.0f, 0.55f)
+        playScareCombo(player, "drag")
+        triggerPanicChatBurst(player, 4)
+    }
+
+    private fun liftAndThrowPlayer(player: Player) {
+        player.addPotionEffect(PotionEffect(PotionEffectType.LEVITATION, 25, 2, false, false, true))
+        player.addPotionEffect(PotionEffect(PotionEffectType.DARKNESS, 70, 0, false, false, true))
+        player.sendTitle("\u00a74${nameOfHerobrine()}", "\u00a7cnhac bong", 0, 25, 10)
+        player.playSound(player.location, Sound.ENTITY_ENDERMAN_TELEPORT, 1.0f, 0.55f)
+        playScareCombo(player, "lift")
+        plugin.scheduler.runPlayerLater(player, 24L) {
+            if (!player.isOnline) return@runPlayerLater
+            val side = player.location.direction.clone().crossProduct(org.bukkit.util.Vector(0.0, 1.0, 0.0)).normalize()
+            player.velocity = side.multiply(Random.nextDouble(0.9, 1.4)).setY(0.65)
+            player.playSound(player.location, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1.0f, 0.6f)
+            playScareCombo(player, "throw")
+        }
+    }
+
+    private fun crawlScare(player: Player) {
+        val loc = player.location.clone().add(player.location.direction.normalize().multiply(1.4))
+        loc.y = player.location.y - 1.0
+        player.sendTitle("\u00a78...", "\u00a74no dang bo toi", 0, 25, 8)
+        player.playSound(player.location, Sound.ENTITY_SPIDER_AMBIENT, 0.9f, 0.45f)
+        player.playSound(player.location, Sound.BLOCK_SCULK_SENSOR_CLICKING, 1.0f, 0.6f)
+        playScareCombo(player, "crawl")
+        plugin.protocolScareEngine?.triggerOccultPacketBurst(player, loc)
+        triggerPanicChatBurst(player, 3)
     }
 
     private fun triggerHerobrineJumpscare(player: Player) {
@@ -272,6 +418,7 @@ class HallucinationEngine(private val plugin: YuanSanity) {
             player.playSound(player.location, Sound.ENTITY_WARDEN_SONIC_BOOM, 1.0f, 0.55f)
             player.playSound(player.location, Sound.BLOCK_SCULK_SHRIEKER_SHRIEK, 1.0f, 0.7f)
             player.playSound(player.location, Sound.ENTITY_ENDERMAN_SCREAM, 0.9f, 0.6f)
+            playScareCombo(player, "jumpscare")
             plugin.protocolScareEngine?.triggerHerobrinePacketBurst(player, loc)
             triggerPanicChatBurst(player, 5)
             triggerInventoryGlitch(player)
@@ -316,6 +463,7 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         player.sendTitle("\u00a74+", "\u00a78mot dau hieu vua xuat hien", 0, 30, 10)
         player.playSound(player.location, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1.0f, 0.55f)
         player.playSound(player.location, Sound.ENTITY_WITHER_SPAWN, 0.35f, 0.7f)
+        playScareCombo(player, "cross")
         triggerPanicChatBurst(player, 4)
     }
 
@@ -342,6 +490,7 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         player.sendTitle("\u00a74${nameOfHerobrine()}", "\u00a7cnghi le da bat dau", 0, 35, 10)
         player.playSound(player.location, Sound.BLOCK_END_PORTAL_SPAWN, 0.8f, 0.55f)
         player.playSound(player.location, Sound.BLOCK_BEACON_DEACTIVATE, 1.0f, 0.6f)
+        playScareCombo(player, "summon")
         triggerPanicChatBurst(player, 5)
     }
 
@@ -364,6 +513,7 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         player.addPotionEffect(PotionEffect(PotionEffectType.SLOWNESS, 60, 1, false, false, true))
         player.playSound(player.location, Sound.BLOCK_REDSTONE_TORCH_BURNOUT, 1.0f, 0.45f)
         player.playSound(player.location, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.7f, 0.65f)
+        playScareCombo(player, "redstone")
         triggerPanicChatBurst(player, 6)
     }
 
@@ -540,7 +690,7 @@ class HallucinationEngine(private val plugin: YuanSanity) {
 
         val herobrineName = plugin.config.getString("hallucination.herobrine-name", "Herobrine") ?: "Herobrine"
         for (i in 0 until amount.coerceIn(1, 8)) {
-            plugin.scheduler.runPlayerLater(player, (i * Random.nextLong(4L, 9L))) {
+            plugin.scheduler.runPlayerLater(player, ((i + 1) * Random.nextLong(4L, 9L))) {
                 if (!player.isOnline) return@runPlayerLater
                 val sender = if (Random.nextBoolean()) herobrineName else "???"
                 val msg = panicMessages[Random.nextInt(panicMessages.size)]
@@ -558,6 +708,75 @@ class HallucinationEngine(private val plugin: YuanSanity) {
         )
         val sound = creepySounds[Random.nextInt(creepySounds.size)]
         player.playSound(loc, sound, 0.5f, Random.nextFloat() * 0.5f + 0.5f)
+        if (Random.nextDouble() < 0.35) {
+            playScareCombo(player, "ambient")
+        }
+    }
+
+    private fun playScareCombo(player: Player, type: String) {
+        if (!plugin.config.getBoolean("hallucination.extra-scare-sounds-enabled", true)) return
+
+        when (type) {
+            "ambient" -> {
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.45f, 0.75f)
+                playNamedSound(player, "ENTITY_GHAST_AMBIENT", 0.35f, 0.55f)
+            }
+            "stalker-spawn" -> {
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.9f, 0.55f)
+                playNamedSound(player, "ENTITY_ENDERMAN_STARE", 0.8f, 0.45f)
+                playNamedSound(player, "BLOCK_SCULK_SENSOR_CLICKING", 0.8f, 0.7f)
+            }
+            "jumpscare" -> {
+                playNamedSound(player, "ENTITY_WITCH_CELEBRATE", 1.0f, 0.55f)
+                playNamedSound(player, "ENTITY_GHAST_SCREAM", 0.9f, 0.7f)
+                playNamedSound(player, "ENTITY_VEX_CHARGE", 0.7f, 0.55f)
+            }
+            "drag" -> {
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.95f, 0.45f)
+                playNamedSound(player, "BLOCK_CHAIN_PLACE", 1.0f, 0.45f)
+                playNamedSound(player, "BLOCK_GRAVEL_BREAK", 0.8f, 0.55f)
+            }
+            "lift" -> {
+                playNamedSound(player, "ENTITY_GHAST_WARN", 0.9f, 0.55f)
+                playNamedSound(player, "ENTITY_ILLUSIONER_PREPARE_BLINDNESS", 0.7f, 0.7f)
+                playNamedSound(player, "ENTITY_WITCH_CELEBRATE", 0.7f, 0.65f)
+            }
+            "throw" -> {
+                playNamedSound(player, "ENTITY_GHAST_SHOOT", 0.8f, 0.55f)
+                playNamedSound(player, "ENTITY_PLAYER_HURT", 0.55f, 0.7f)
+            }
+            "crawl" -> {
+                playNamedSound(player, "ENTITY_SPIDER_AMBIENT", 0.9f, 0.4f)
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.75f, 0.5f)
+                playNamedSound(player, "BLOCK_SCULK_CATALYST_BLOOM", 0.8f, 0.55f)
+            }
+            "hit" -> {
+                playNamedSound(player, "ENTITY_WITCH_CELEBRATE", 0.8f, 0.6f)
+                playNamedSound(player, "ENTITY_ZOMBIE_ATTACK_IRON_DOOR", 0.85f, 0.5f)
+            }
+            "cross" -> {
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.8f, 0.4f)
+                playNamedSound(player, "ENTITY_EVOKER_PREPARE_SUMMON", 0.8f, 0.65f)
+                playNamedSound(player, "ENTITY_GHAST_AMBIENT", 0.45f, 0.45f)
+            }
+            "summon" -> {
+                playNamedSound(player, "ENTITY_WITCH_CELEBRATE", 1.0f, 0.6f)
+                playNamedSound(player, "ENTITY_EVOKER_CAST_SPELL", 0.9f, 0.65f)
+                playNamedSound(player, "ENTITY_WITHER_SPAWN", 0.25f, 0.75f)
+            }
+            "redstone" -> {
+                playNamedSound(player, "ENTITY_WITCH_AMBIENT", 0.9f, 0.5f)
+                playNamedSound(player, "ENTITY_ELDER_GUARDIAN_CURSE", 0.8f, 0.55f)
+                playNamedSound(player, "BLOCK_REDSTONE_TORCH_BURNOUT", 1.0f, 0.45f)
+            }
+        }
+    }
+
+    private fun playNamedSound(player: Player, soundName: String, volume: Float, pitch: Float) {
+        runCatching {
+            val sound = Sound.valueOf(soundName)
+            player.playSound(player.location, sound, volume, pitch)
+        }
     }
 
     private fun showFakeBlocks(player: Player, blocks: List<Pair<Location, Material>>, durationTicks: Long) {
@@ -623,6 +842,14 @@ class HallucinationEngine(private val plugin: YuanSanity) {
 
     private fun removeEntity(entity: Entity) {
         plugin.scheduler.runEntityTask(entity) {
+            if (entity.isValid) {
+                entity.remove()
+            }
+        }
+    }
+
+    private fun removeEntityNow(entity: Entity) {
+        runCatching {
             if (entity.isValid) {
                 entity.remove()
             }

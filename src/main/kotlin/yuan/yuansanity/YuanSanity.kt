@@ -74,7 +74,7 @@ class YuanSanity : JavaPlugin() {
             playerListener.shutdown()
         }
         if (::hallucinationEngine.isInitialized) {
-            hallucinationEngine.cleanupAll()
+            hallucinationEngine.cleanupAllOnDisable()
         }
         server.onlinePlayers.forEach { packetInjector.eject(it) }
         logger.info("YuanSanity da tat")
