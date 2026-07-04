@@ -30,6 +30,8 @@ settings:
   actionbar-format: "&8[&4Sanity&8] &c%percent%% &7- &f%status%"
 
 hallucination:
+  # Bat combo sound hu bo sung bang sound co san cua Minecraft
+  extra-scare-sounds-enabled: true
   # Bat cac hieu ung packet nang cao bang ProtocolLib neu server co cai ProtocolLib
   protocollib-packet-scares-enabled: true
   # Fake set tia set client-side gan player
@@ -58,6 +60,16 @@ hallucination:
   occult-scene-duration: 120
   # Ten player gia khi Sanity ve 0
   herobrine-name: "Herobrine"
+  # Tao Herobrine entity that de duoi theo player, chi target nhin thay
+  herobrine-stalker-enabled: true
+  # Bat cac pha hu nang: giat nguoc, dap xuong, nhot gia, keo vao nghi le, roi ao
+  herobrine-heavy-scares-enabled: true
+  # Cooldown giua cac hanh dong keo chan/nhac bong/knockback (giay)
+  herobrine-stalker-action-cooldown: 6
+  # Luc keo player ve phia Herobrine/nghi le
+  herobrine-pull-power: 1.25
+  # Thoi gian long sat/cobweb gia ton tai (tick)
+  herobrine-fake-cage-duration: 70
   # Moi bao nhieu giay bi Herobrine jumpscare khi Sanity = 0
   herobrine-jumpscare-interval: 15
   # Thoi gian Herobrine dung lai truoc khi tan bien (tick)
