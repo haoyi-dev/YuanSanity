@@ -1,0 +1,44 @@
+# ============================== #
+#     YuanSanity Configuration   #
+# ============================== #
+
+# Ngon ngu su dung (en / vi)
+language: vi
+
+settings:
+  # Muc anh sang toi da de bi tru Sanity (0-15)
+  darkness-threshold: 5
+  # Luong Sanity bi tru moi giay khi o trong toi
+  darkness-drain: 1.0
+  # Luong Sanity toi da
+  max-sanity: 100.0
+  # Luong Sanity hoi phuc moi giay khi dung cho sang
+  light-restore-rate: 0.5
+  # Phan tram Sanity hoi phuc khi ngu
+  sleep-restore-percent: 100
+  # Do sau (Y level) bat dau bi tru Sanity
+  depth-threshold: 0
+  # Luong Sanity bi tru moi giay khi o duoi do sau
+  depth-drain: 0.5
+  # Khoang cach (blocks) de tinh la co don
+  isolation-range: 500
+  # Luong Sanity bi tru moi giay khi co don
+  isolation-drain: 0.3
+
+hallucination:
+  # Ti le xuat hien block gia (0.0 - 1.0)
+  fake-block-chance: 0.05
+  # Ti le nghe thay tieng thi tham
+  whisper-chance: 0.02
+  # Ti le xuat hien ke song trung
+  doppelganger-chance: 0.01
+  # Ti le loi inventory
+  inventory-glitch-chance: 0.03
+  # Ti le vat pham ao
+  fake-drop-chance: 0.04
+  # Thoi gian cho giua cac lan spawn Nightmare (giay)
+  nightmare-cooldown: 60
+  # Mau cua The Nightmare
+  nightmare-health: 100.0
+  # Sat thuong cua The Nightmare
+  nightmare-damage: 15.0

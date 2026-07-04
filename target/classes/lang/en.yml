@@ -1,0 +1,12 @@
+prefix: "&8[&4YuanSanity&8]"
+messages:
+  sanity-level: "&7Your sanity: &c%sanity%"
+  too-dark: "&cIt's too dark... something is watching you."
+  restored: "&aWarmth comforts you. Sanity restored."
+  nightmare-spawn: "&4A nightmare descends upon you..."
+  whisper: "&7&o%message%"
+  reload-success: "&aConfig reloaded successfully."
+  no-permission: "&cYou don't have permission."
+  usage: "&cUsage: /sanity <get|set|reload>"
+  set-sanity: "&aSet %player%'s sanity to %value%."
+  player-not-found: "&cPlayer not found."

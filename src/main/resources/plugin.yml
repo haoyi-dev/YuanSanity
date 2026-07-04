@@ -1,0 +1,23 @@
+name: YuanSanity
+version: '${project.version}'
+main: yuan.yuansanity.YuanSanity
+api-version: '1.20'
+folia-supported: true
+authors: [ Yuan ]
+description: He thong ao giac kinh di voi Sanity
+
+softdepend:
+  - PlaceholderAPI
+
+commands:
+  sanity:
+    description: Quan ly do tinh tao cua nguoi choi
+    usage: /sanity <get|set|reload>
+
+permissions:
+  yuansanity.admin:
+    description: Quyen quan tri YuanSanity
+    default: op
+  yuansanity.bypass:
+    description: Bo qua viec giam Sanity
+    default: false
